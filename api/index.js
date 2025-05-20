@@ -187,7 +187,7 @@ bot.command('verify', async (ctx) => {
           await ctx.telegram.deleteMessage(ctx.chat.id, successMessage.message_id);
           console.log(`Deleted success message ${successMessage.message_id}`);
         } catch (error) {
-          console.error(`Error deleting success message ${result.message_id}:`, error.message);
+          console.error(`Error deleting success message ${successMessage.message_id}:`, error.message);
         }
       }, WELCOME_TIMEOUT);
 
@@ -289,17 +289,26 @@ bot.command('stats', async (ctx) => {
 console.log('Checking bot permissions...');
 checkBotPermissions();
 
-// Start bot with webhook for Vercel
-console.log('Setting up webhook for Vercel...');
-bot.launch({
-  webhook: {
-    domain: process.env.VERCEL_URL || 'https://your-vercel-app.vercel.app',
-    path: '/api',
-  },
-}).catch((error) => {
-  console.error('Failed to start bot:', error.message);
-  bot.telegram.sendMessage(ADMIN_CHAT_ID, `Failed to start bot: ${error.message}`);
-});
+// Start bot: Use polling for local testing, webhooks for Vercel
+const isLocal = !process.env.VERCEL_URL;
+if (isLocal) {
+  console.log('Starting bot with polling for local testing...');
+  bot.launch().catch((error) => {
+    console.error('Failed to start bot with polling:', error.message);
+    bot.telegram.sendMessage(ADMIN_CHAT_ID, `Failed to start bot with polling: ${error.message}`);
+  });
+} else {
+  console.log('Setting up webhook for Vercel...');
+  bot.launch({
+    webhook: {
+      domain: process.env.VERCEL_URL || 'https://your-vercel-app.vercel.app',
+      path: '/api',
+    },
+  }).catch((error) => {
+    console.error('Failed to start bot with webhook:', error.message);
+    bot.telegram.sendMessage(ADMIN_CHAT_ID, `Failed to start bot with webhook: ${error.message}`);
+  });
+}
 
 // Handle process termination
 process.once('SIGINT', () => bot.stop('SIGINT'));
